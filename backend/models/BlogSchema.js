@@ -19,10 +19,10 @@ const BlogSchema=new mongoose.Schema(
             type: String, 
             required: true 
         },
-        isPublished: {
-            type: Boolean,
-            default: false, // false indicates it's a draft
-        },
+        status:{ type: String,
+             enum: ['draft', 'published'],
+             default: 'draft'
+         },
         createdAt: { 
             type: Date, 
             default: Date.now 

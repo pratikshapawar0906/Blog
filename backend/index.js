@@ -1,5 +1,4 @@
 import express from "express"
-import mongoose from "mongoose";
 import cors from "cors";
 import cloudinary from "cloudinary"
 import dotenv from "dotenv";
@@ -7,6 +6,7 @@ import path from "path";
 import connectDB from "./config/db.js";
 dotenv.config()
 import router from "./routes/route.js"
+import bodyParser from "body-parser";
 
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
@@ -19,7 +19,8 @@ const app=express();
 
 app.use(cors());
 app.use(express.json());
-
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 connectDB();
 
