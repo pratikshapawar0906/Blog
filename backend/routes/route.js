@@ -1,10 +1,10 @@
 import express from "express";
 import multer from "multer"; // Import multer
 import User from "../models/UserSchme.js";
-import { blogPost, saveDraft, getDraft } from "../controllers/BlogController.js";
+import { blogPost, saveDraft, getDraft, updateBlog, getBlogById } from "../controllers/BlogController.js";
 import { forgot_password, login, signup, updateProfile, user } from "../controllers/UserController.js";
 import Blog from "../models/BlogSchema.js";
-import { authMiddleware, authenticateToken } from "../middleare/authMiddleare.js";
+import { authMiddleware } from "../middleare/authMiddleare.js";
 import { v2 as cloudinary } from 'cloudinary';
 
 const router = express.Router();
@@ -35,8 +35,14 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }, // Limit to 50MB per file
 })
 
-// Blog Routes // blog post //create blog 
-router.post("/blogPost", authMiddleware, blogPost); // blog post 
+// Get a single blog by ID
+router.get("/blogs/:id", getBlogById);
+
+// Create a new blog post (protected route)
+router.post("/blogPost", authMiddleware, blogPost);
+
+// Update an existing blog post (protected route)
+router.put("/blogs/:id", authMiddleware, updateBlog);
 
 // Blog Routes  // get all blog 
 router.get("/AllPost", async (req, res) => {
@@ -51,9 +57,16 @@ router.get("/AllPost", async (req, res) => {
 
  // find blog by id
 router.get("/blog/:id", async (req, res) => {
-  const blog = await Blog.findById(req.params.id).populate('author', 'email');
-  if (!blog) return res.status(404).json({ error: 'Blog not found' });
-  res.json(blog);
+  try {
+    const blog = await Blog.findById(req.params.id).populate("author", "email");
+    if (!blog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
+    res.json(blog);
+  } catch (error) {
+    console.error("Error fetching blog:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 }); 
 
 

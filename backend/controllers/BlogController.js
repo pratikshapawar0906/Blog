@@ -3,38 +3,68 @@ import Blog from "../models/BlogSchema.js"
 
 // Create a blog post
 export const blogPost= async (req, res) => {
-    // try {
-    //   const { BlogId } = req.user.id;
-    //   const { title, content,  bannerUrl, author, status } = req.body;
-      
-    //   if (!title || !content || !author || ! bannerUrl) {
-    //     return res.status(400).json({ message: "All fields are required" });
-    //   }
-  
-    //   const newBlog = new Blog({ title, content,  author: BlogId , bannerUrl, status});
-    //   await newBlog.save();
-  
-    //   res.status(201).json(newBlog);
-    // } catch (error) {
-    //   res.status(500).json({ message: error.message });
-    // }
+  try {
+    const { title, content, bannerUrl, status } = req.body;
 
-
-    try {
-      const { BlogId } = req.user.id;
-      const { title, content,  bannerUrl, author, status } = req.body;
-      
-      if (!title || !content || !author || ! bannerUrl ) {
-        return res.status(400).json({ message: "All fields are required" });
-      }
-      const blog = new Blog({ title, content,  author: BlogId , bannerUrl, status});
-      await blog.save();
-      res.status(201).json(blog);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
+    if (!title || !content || !bannerUrl || !status) {
+      return res.status(400).json({ message: 'All fields are required' });
     }
+
+    const blog = new Blog({
+      title,
+      content,
+      bannerUrl,
+      status,
+      author: req.user.userId,
+    });
+
+    await blog.save();
+    res.status(201).json(blog);
+  } catch (err) {
+    console.error(err); 
+    res.status(500).json({ message: err.message });
+  }
 };
 
+// Update an existing blog post
+export const updateBlog = async (req, res) => {
+  const { title, content, bannerUrl, status } = req.body;
+
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
+
+    // Ensure the user is the blog's author
+    if (blog.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    blog.title = title;
+    blog.content = content;
+    blog.bannerUrl = bannerUrl;
+    blog.status = status;
+
+    await blog.save();
+    res.json(blog);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Get a single blog post by ID
+export const getBlogById = async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
+    res.json(blog);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
 // // Get all blogs
 // export const AllBlog= async (req, res) => {
 //     // try {
@@ -61,6 +91,7 @@ export const getDraft = async (req, res) => {
   }
 };
   
+
 // export const blog=async(req,res)=>{
 //   // try{
 //   //     const blog=await Blog.findById(req.params.id).populate("author","name", "email")
