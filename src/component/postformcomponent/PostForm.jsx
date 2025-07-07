@@ -1,152 +1,53 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {  useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 
 const BlogEditor = () => {
-  const { BlogId } = useParams();
-  const navigate = useNavigate();
-  const fileInputRef = useRef(null);
-  const [blog, setBlog] = useState({
-    title: '',
-    bannerUrl: '',
-    content: '',
-  });
+  const [title, setTitle] = useState('');
+  const [bannerUrl, setBannerUrl] = useState('');
+  const [content, setContent] = useState('');
 
-  // Check if user is logged in
-  useEffect(() => {
-    const token = localStorage.getItem("Token");
-    if (!token) {
-      console.error("No token found. Redirecting to login...");
-      navigate('/login');
-    }
-  }, [navigate]);
+  const { id: BlogId } = useParams();
+  const token = localStorage.getItem('Token'); 
 
   useEffect(() => {
-    if (!BlogId) return;
-    axios.get(`http://localhost:7000/api/blog/${BlogId}`)
-      .then(({ data }) => setBlog(data))
-      .catch((err) => console.error("Error fetching blog:", err));
-  }, [BlogId]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setBlog({ ...blog, [name]: value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-  
-    const token = localStorage.getItem("Token");
-    if (!token) {
-      console.error("No token found. Redirecting to login...");
-      navigate('/login');
-      return;
-    }
-  
-    if (!blog.title || !blog.content) {
-      toast.error("Title and Content are required.");
-      return;
-    }
-  
-    let bannerUrl = blog.bannerUrl;
-  
-    if (fileInputRef.current.files[0]) {
-      // Upload the image to the backend
-      const formData = new FormData();
-      formData.append("blogPhoto", fileInputRef.current.files[0]);
-      formData.append("BlogId", BlogId);
-  
-      try {
-        const response = await fetch("http://localhost:7000/api/blogPost/uploadBlogPhoto", {
-          method: "POST",
-          body: formData,
-        });
-  
-        const data = await response.json();
-        bannerUrl = data.secure_url; // Update with actual Cloudinary URL
-      } catch (error) {
-        console.error("Error uploading image:", error);
-        toast.error("Image upload failed.");
-        return;
-      }
-    }
-  
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  
-    const apiUrl = BlogId 
-      ? `http://localhost:7000/api/blogPost/${BlogId}` 
-      : 'http://localhost:7000/api/blogPost';
-  
-    const method = BlogId ? 'put' : 'post';
-  
-    try {
-      await axios[method](apiUrl, { ...blog, bannerUrl }, config);
-      toast.success(BlogId ? "Blog updated successfully!" : "Blog published successfully!");
-      navigate('/');
-    } catch (err) {
-      if (err.response && err.response.status === 401) {
-        console.error("Unauthorized. Redirecting to login...");
-        navigate('/login');
-      } else {
-        console.error("An error occurred:", err);
-        toast.error("An error occurred while saving the blog.");
-      }
-    }
-  };
-  
-
-  // Cloudinary Image Upload
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setBlog((prevBlog) => ({ ...prevBlog, bannerUrl: reader.result }));
-    };
-    reader.readAsDataURL(file);
-    
-  };
-
-  const handleSaveDraft = async (e) => {
-    e.preventDefault();
-
-    if (!blog.title || !blog.content) {
-      toast.error("Title and Content are required.");
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem("Token");
-      console.log(token) // Retrieve token from local storage
-
-      const response = await axios.post("http://localhost:7000/api/saveDraft", {
-        title: blog.title,
-        content: blog.content,
-        isPublished: false,
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` } // Include token in request headers
+    if (BlogId) {
+      axios.get(`http://localhost:7000/api/blogs/${BlogId}`).then((res) => {
+        const blog = res.data;
+        setTitle(blog.title);
+        setContent(blog.content);
+        setBannerUrl(blog.bannerUrl);
       });
+    }
+  }, [BlogId]);
+  
 
-      if (response.data.success) {
-        toast.success("Draft saved successfully!");
-        navigate(`/preview/${response.data.draft}`);// Redirect to preview page
-      } else {
-        toast.error(response.data.message || "Error saving draft.");
-      }
-    } catch (error) {
-      toast.error("An error occurred while saving the draft.");
-      console.error(error);
+  const savePost = async (status) => {
+    try {
+      const post = {
+        title,
+        content,
+        bannerUrl,
+        status, // should be either 'draft' or 'published'
+      };
+  
+      const res = await axios.post('http://localhost:7000/api/blogPost', post, {
+        headers: {
+          Authorization: `Bearer ${token}`, // make sure token is valid
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      console.log(res.data);
+      toast.success('Blog post saved successfully!');
+    } catch (err) {
+      console.error('Error:', err.response?.data || err.message);
+      toast.error(err.response?.data?.message || 'Something went wrong!');
     }
   };
-
+  
   return (
     <div className="container my-4">
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -155,14 +56,14 @@ const BlogEditor = () => {
           <button
             type="submit"
             className="btn btn-dark me-2"
-            onClick={handleSubmit}
+            onClick={() => savePost('published')}
           >
             Publish
           </button>
           <button
             type="button"
             className="btn btn-outline-dark"
-            onClick={handleSaveDraft}
+            onClick={() => savePost('draft')}
           >
             Save Draft
           </button>
@@ -171,22 +72,29 @@ const BlogEditor = () => {
 
       {/* Blog Banner */}
       <div className="mb-4">
-        <div
-          className="border rounded bg-light d-flex justify-content-center align-items-center"
-          onClick={() => fileInputRef.current.click()}
-          style={{
-            height: "400px",
-            backgroundImage: `url(${blog.bannerUrl})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            cursor: "pointer"
-          }}
-        >
-          {!blog.bannerUrl && (
-            <span className="text-muted">Upload or paste banner URL</span>
-          )}
-        </div>
-        <input type="file" accept="image/*" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUpload} />
+      <div
+        className="border rounded bg-light d-flex justify-content-center align-items-center"
+        style={{
+          height: "400px",
+          backgroundImage: `url(${bannerUrl})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          cursor: "pointer",
+        }}
+      >
+        {!bannerUrl && (
+          <span className="text-muted">Upload or paste banner URL</span>
+        )}
+      </div>
+      
+      <input
+        type="text"
+        className="form-control mt-2"
+        placeholder="Enter banner image URL"
+        value={bannerUrl}
+        onChange={(e) => setBannerUrl(e.target.value)}
+      />
+      
       </div>
 
       {/* Blog Title */}
@@ -199,8 +107,8 @@ const BlogEditor = () => {
           id="blogTitle"
           className="form-control"
           name="title"
-          value={blog.title}
-          onChange={handleChange}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           placeholder="Enter your blog title"
           required
         />
@@ -216,8 +124,8 @@ const BlogEditor = () => {
           className="form-control"
           rows="10"
           name="content"
-          value={blog.content}
-          onChange={handleChange}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
           placeholder="Let’s write an awesome story!"
           required
         ></textarea>

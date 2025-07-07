@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./sign.css";
-import GoogleIcon from "../../../images/google.jpg";
+// import GoogleIcon from "../../../images/google.jpg";
 import { ToastContainer } from "react-toastify";
 import { handleError, handleSuccess } from "../../util";
 
