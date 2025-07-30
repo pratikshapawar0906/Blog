@@ -10,7 +10,7 @@ const BlogEditor = () => {
   const [content, setContent] = useState('');
 
   const { id: BlogId } = useParams();
-  const token = localStorage.getItem('Token'); 
+  const token = localStorage.getItem('token'); 
 
   useEffect(() => {
     if (BlogId) {
@@ -46,6 +46,8 @@ const BlogEditor = () => {
       console.error('Error:', err.response?.data || err.message);
       toast.error(err.response?.data?.message || 'Something went wrong!');
     }
+
+    
   };
   
   return (
@@ -82,6 +84,7 @@ const BlogEditor = () => {
           cursor: "pointer",
         }}
       >
+        
         {!bannerUrl && (
           <span className="text-muted">Upload or paste banner URL</span>
         )}
@@ -94,6 +97,7 @@ const BlogEditor = () => {
         value={bannerUrl}
         onChange={(e) => setBannerUrl(e.target.value)}
       />
+      
       
       </div>
 
